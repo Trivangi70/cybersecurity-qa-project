@@ -1,25 +1,36 @@
+# file_loader.py
 import os
 import PyPDF2
 
-def load_file(file_path):
-    """Load content from a text or PDF file."""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+def load_file(filepath):
+    """
+    Reads and returns the text content from a PDF or TXT file.
+    """
+    if not os.path.exists(filepath):
+        print(f"File not found: {filepath}")
+        return None
 
-    _, ext = os.path.splitext(file_path)
+    ext = os.path.splitext(filepath)[1].lower()
 
-    if ext.lower() == ".txt":
-        with open(file_path, "r", encoding="utf-8") as f:
-            return f.read()
+    try:
+        if ext == ".txt":
+            with open(filepath, "r", encoding="utf-8") as f:
+                return f.read()
 
-    elif ext.lower() == ".pdf":
-        text = ""
-        with open(file_path, "rb") as f:
-            pdf_reader = PyPDF2.PdfReader(f)
-            for page in pdf_reader.pages:
-                text += page.extract_text() or ""
-        return text
+        elif ext == ".pdf":
+            text = ""
+            with open(filepath, "rb") as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            return text
 
-    else:
-        raise ValueError(f"Unsupported file type: {ext}")
+        else:
+            print(f"Unsupported file type: {ext}")
+            return None
 
+    except Exception as e:
+        print(f"Error reading file {filepath}: {e}")
+        return None
