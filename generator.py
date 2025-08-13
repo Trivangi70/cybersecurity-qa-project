@@ -1,76 +1,53 @@
 # generator.py
-
 class Generator:
     def __init__(self):
-        # Placeholder for actual generator (e.g., AI model)
-        # For now, it just echoes the prompt
-        self.generator = lambda prompt, max_new_tokens=350: [{"generated_text": f"Simulated answer for: {prompt}"}]
+        # Placeholder: In real use, integrate AI model here
+        self.generator = lambda prompt, max_new_tokens=350: [{"generated_text": f"Simulated summary for: {prompt}"}]
 
     def _clean_response(self, text):
-        # Simple clean-up, remove extra spaces, etc.
         return text.strip()
 
-    def generate_answer(self, query, docs):
-        if not query or not query.strip():
-            return "No question entered. Please ask a question.", []
+    def extract_text(self, file_path):
+        if file_path.lower().endswith(".txt"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                return [{"filename": file_path.split("/")[-1], "content": f.read()}]
+        elif file_path.lower().endswith(".pdf"):
+            try:
+                import PyPDF2
+                text = ""
+                with open(file_path, "rb") as f:
+                    reader = PyPDF2.PdfReader(f)
+                    for page in reader.pages:
+                        text += page.extract_text() + "\n"
+                return [{"filename": file_path.split("/")[-1], "content": text}]
+            except Exception as e:
+                return [{"filename": file_path.split("/")[-1], "content": f"Could not read PDF: {e}"}]
+        else:
+            return [{"filename": file_path.split("/")[-1], "content": ""}]
 
-        if not docs:
-            return "Sorry, I couldn't find relevant information.", None
+    def generate_answer(self, query, docs, word_limit=None, bullet_points=False):
+        """
+        query: string like "summarize"
+        docs: list of dicts with keys ['filename', 'content']
+        word_limit: maximum words in summary (None means default length)
+        bullet_points: if True, format summary in bullets
+        """
+        # Combine content for summarization
+        combined_context = "\n".join([doc['content'] for doc in docs])
+        prompt = f"{query}: {combined_context}"
 
-        combined_context = "\n\n".join([doc['content'] for doc in docs[:5]])
-        if len(combined_context) > 1000:
-            combined_context = combined_context[:1000].rsplit('.', 1)[0] + '.'
+        response = self.generator(prompt)[0]['generated_text']
+        summary = self._clean_response(response)
 
-        sources = [
-            {
-                "filename": doc['filename'],
-                "summary": doc.get('summary', 'No summary available.')
-            }
-            for doc in docs[:5]
-        ]
+        # Limit summary by word count if word_limit is specified
+        if word_limit:
+            words = summary.split()
+            summary = " ".join(words[:word_limit])
 
-        prompt = (
-            "You are an expert assistant. Use ONLY the context below to answer the question clearly and fully. "
-            "Write 3 to 5 complete sentences without repeating phrases or tautologies. "
-            "Do NOT add any information not found in the context. Avoid bullet points and repetition. End with a summary sentence.\n\n"
-            f"Context:\n{combined_context}\n\n"
-            f"Question: {query}\nAnswer:"
-        )
+        # Convert to bullet points if requested
+        if bullet_points:
+            summary_lines = summary.split(". ")
+            summary = "\n- " + "\n- ".join([line.strip() for line in summary_lines if line.strip()])
 
-        response = self.generator(prompt, max_new_tokens=350)[0]['generated_text']
-        answer = self._clean_response(response)
+        return summary, [doc['filename'] for doc in docs]
 
-        # Your verb-based formatting logic
-        def _starts_with_verb(word):
-            verbs = {"is", "are", "was", "were", "does", "do", "did", "has", "have", "had",
-                     "can", "will", "shall", "should", "could", "would", "may", "might", "must"}
-            return word.lower() in verbs
-
-        words = query.split()
-        question_key = words[0].lower() if words else ""
-
-        answer_lower = answer.lower()
-        if not answer_lower.startswith(question_key):
-            if _starts_with_verb(question_key) or question_key in {"what", "why", "how", "when", "where", "who"}:
-                answer = f"{query.capitalize()} {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-            else:
-                answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-
-        if len(answer.split()) < 40:
-            prompt2 = (
-                "Please elaborate on the following answer in 3 to 5 sentences, "
-                "without repetition or bullet points:\n\n"
-                f"Answer: {answer}\n\n"
-                "Elaborated answer:"
-            )
-            response2 = self.generator(prompt2, max_new_tokens=350)[0]['generated_text']
-            answer = self._clean_response(response2)
-
-            answer_lower = answer.lower()
-            if not answer_lower.startswith(question_key):
-                if _starts_with_verb(question_key) or question_key in {"what", "why", "how", "when", "where", "who"}:
-                    answer = f"{query.capitalize()} {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-                else:
-                    answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-
-        return answer, sources
