@@ -1,54 +1,50 @@
-from generator import AnswerGenerator  # updated to use your existing class
-from file_loader import load_file
-from summarizer import summarize_text
 import os
+from generator import Generator
 
-def load_docs():
-    """Load all .txt and .pdf files from the repo root into a list."""
-    docs = []
-    files = [f for f in os.listdir('.') if f.endswith(('.txt', '.pdf'))]
+UPLOADS_FOLDER = "uploads"
 
-    for file_path in files:
-        try:
-            content = load_file(file_path)
-            docs.append({
-                "filename": file_path,
-                "content": content,
-                "summary": summarize_text(content)
-            })
-        except Exception as e:
-            print(f"Error loading {file_path}: {e}")
-    return docs
+def list_uploaded_files():
+    files = os.listdir(UPLOADS_FOLDER)
+    return [f for f in files if os.path.isfile(os.path.join(UPLOADS_FOLDER, f))]
 
 def main():
-    # Load your documents
-    docs = load_docs()
-    generator = AnswerGenerator()  # initialize your answer generator
+    generator = Generator()
 
-    print("Device set to use mps:0")
-    print("Ask your questions (type 'exit' to quit):")
+    files = list_uploaded_files()
+    if not files:
+        print("⚠️ No files found in uploads/ folder.")
+        return
 
-    while True:
-        query = input("> ").strip()
-        if query.lower() == "exit":
-            print("Exiting...")
-            break
-        if not query:
-            continue
+    print("\n📂 Files in uploads/:")
+    for idx, file in enumerate(files, start=1):
+        print(f"{idx}. {file}")
 
-        try:
-            answer, sources = generator.generate_answer(query, docs)
-            print("\nAnswer:", answer)
+    print("\nChoose an option:")
+    print("1. Summarize ALL files")
+    print("2. Summarize a specific file by name")
+    
+    choice = input("Enter 1 or 2: ").strip()
 
-            if sources:
-                print("\nSources:")
-                for i, src in enumerate(sources, start=1):
-                    print(f"{i}. {src['filename']} — {src['summary']}")
-            print()
+    if choice == "1":
+        selected_files = files
+    elif choice == "2":
+        file_name = input("Enter exact file name from the list above: ").strip()
+        if file_name not in files:
+            print("❌ File not found.")
+            return
+        selected_files = [file_name]
+    else:
+        print("❌ Invalid choice.")
+        return
 
-        except Exception as e:
-            print(f"Error generating answer: {e}\n")
+    for file in selected_files:
+        file_path = os.path.join(UPLOADS_FOLDER, file)
+        print(f"\n📄 Processing: {file}")
+        text = generator.extract_text(file_path)
+        summary, sources = generator.generate_answer("summarize", text)
+        print("\n📌 Summary:")
+        print(summary)
+        print("\n📎 Sources:", sources)
 
 if __name__ == "__main__":
     main()
-
