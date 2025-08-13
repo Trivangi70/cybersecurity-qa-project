@@ -1,57 +1,53 @@
-def generate_answer(self, query, docs):
-    if not query or not query.strip():
-        return "No question entered. Please ask a question.", []
+# generator.py
 
-    if not docs:
-        return "Sorry, I couldn't find relevant information.", None
+class Generator:
+    def __init__(self):
+        # Placeholder for actual generator (e.g., AI model)
+        # For now, it just echoes the prompt
+        self.generator = lambda prompt, max_new_tokens=350: [{"generated_text": f"Simulated answer for: {prompt}"}]
 
-    combined_context = "\n\n".join([doc['content'] for doc in docs[:5]])
-    if len(combined_context) > 1000:
-        combined_context = combined_context[:1000].rsplit('.', 1)[0] + '.'
+    def _clean_response(self, text):
+        # Simple clean-up, remove extra spaces, etc.
+        return text.strip()
 
-    sources = [
-        {
-            "filename": doc['filename'],
-            "summary": doc.get('summary', 'No summary available.')
-        }
-        for doc in docs[:5]
-    ]
+    def generate_answer(self, query, docs):
+        if not query or not query.strip():
+            return "No question entered. Please ask a question.", []
 
-    prompt = (
-        "You are an expert assistant. Use ONLY the context below to answer the question clearly and fully. "
-        "Write 3 to 5 complete sentences without repeating phrases or tautologies. "
-        "Do NOT add any information not found in the context. Avoid bullet points and repetition. End with a summary sentence.\n\n"
-        f"Context:\n{combined_context}\n\n"
-        f"Question: {query}\nAnswer:"
-    )
+        if not docs:
+            return "Sorry, I couldn't find relevant information.", None
 
-    response = self.generator(prompt, max_new_tokens=350)[0]['generated_text']
-    answer = self._clean_response(response)
+        combined_context = "\n\n".join([doc['content'] for doc in docs[:5]])
+        if len(combined_context) > 1000:
+            combined_context = combined_context[:1000].rsplit('.', 1)[0] + '.'
 
-    def _starts_with_verb(word):
-        verbs = {"is", "are", "was", "were", "does", "do", "did", "has", "have", "had",
-                 "can", "will", "shall", "should", "could", "would", "may", "might", "must"}
-        return word.lower() in verbs
+        sources = [
+            {
+                "filename": doc['filename'],
+                "summary": doc.get('summary', 'No summary available.')
+            }
+            for doc in docs[:5]
+        ]
 
-    words = query.split()
-    question_key = words[0].lower() if words else ""
-
-    answer_lower = answer.lower()
-    if not answer_lower.startswith(question_key):
-        if _starts_with_verb(question_key) or question_key in {"what", "why", "how", "when", "where", "who"}:
-            answer = f"{query.capitalize()} {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-        else:
-            answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
-
-    if len(answer.split()) < 40:
-        prompt2 = (
-            "Please elaborate on the following answer in 3 to 5 sentences, "
-            "without repetition or bullet points:\n\n"
-            f"Answer: {answer}\n\n"
-            "Elaborated answer:"
+        prompt = (
+            "You are an expert assistant. Use ONLY the context below to answer the question clearly and fully. "
+            "Write 3 to 5 complete sentences without repeating phrases or tautologies. "
+            "Do NOT add any information not found in the context. Avoid bullet points and repetition. End with a summary sentence.\n\n"
+            f"Context:\n{combined_context}\n\n"
+            f"Question: {query}\nAnswer:"
         )
-        response2 = self.generator(prompt2, max_new_tokens=350)[0]['generated_text']
-        answer = self._clean_response(response2)
+
+        response = self.generator(prompt, max_new_tokens=350)[0]['generated_text']
+        answer = self._clean_response(response)
+
+        # Your verb-based formatting logic
+        def _starts_with_verb(word):
+            verbs = {"is", "are", "was", "were", "does", "do", "did", "has", "have", "had",
+                     "can", "will", "shall", "should", "could", "would", "may", "might", "must"}
+            return word.lower() in verbs
+
+        words = query.split()
+        question_key = words[0].lower() if words else ""
 
         answer_lower = answer.lower()
         if not answer_lower.startswith(question_key):
@@ -60,4 +56,21 @@ def generate_answer(self, query, docs):
             else:
                 answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
 
-    return answer, sources
+        if len(answer.split()) < 40:
+            prompt2 = (
+                "Please elaborate on the following answer in 3 to 5 sentences, "
+                "without repetition or bullet points:\n\n"
+                f"Answer: {answer}\n\n"
+                "Elaborated answer:"
+            )
+            response2 = self.generator(prompt2, max_new_tokens=350)[0]['generated_text']
+            answer = self._clean_response(response2)
+
+            answer_lower = answer.lower()
+            if not answer_lower.startswith(question_key):
+                if _starts_with_verb(question_key) or question_key in {"what", "why", "how", "when", "where", "who"}:
+                    answer = f"{query.capitalize()} {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
+                else:
+                    answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
+
+        return answer, sources
