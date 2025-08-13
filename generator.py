@@ -13,26 +13,19 @@ class AnswerGenerator:
         )
 
     def _clean_response(self, response):
-        # Split sentences
         sentences = re.split(r'(?<=[.!?]) +', response.strip())
         seen = set()
         filtered = []
         for i, sent in enumerate(sentences):
             norm = sent.lower().strip()
-
-            # Remove repeated whole sentences
             if norm in seen:
                 break
-
-            # Remove immediate phrase repetition (e.g. "Cyber attack is a cyber attack")
             if i > 0:
                 prev_norm = sentences[i-1].lower().strip()
                 if norm.startswith(prev_norm.split()[0]) and norm.startswith(prev_norm):
                     continue
-
             filtered.append(sent)
             seen.add(norm)
-
         return ' '.join(filtered)
 
     def generate_answer(self, query, docs):
@@ -43,7 +36,14 @@ class AnswerGenerator:
         if len(combined_context) > 1000:
             combined_context = combined_context[:1000].rsplit('.', 1)[0] + '.'
 
-        source_names = ", ".join([doc['filename'] for doc in docs[:5]])
+        # Collect sources with summaries
+        sources = [
+            {
+                "filename": doc['filename'],
+                "summary": doc.get('summary', 'No summary available.')
+            }
+            for doc in docs[:5]
+        ]
 
         prompt = (
             "You are an expert assistant. Use ONLY the context below to answer the question clearly and fully. "
@@ -87,4 +87,4 @@ class AnswerGenerator:
                 else:
                     answer = f"{query.capitalize()} is {answer[0].lower() + answer[1:]}" if answer else f"{query.capitalize()}."
 
-        return answer, source_names
+        return answer, sources
