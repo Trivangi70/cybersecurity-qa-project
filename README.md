@@ -41,4 +41,6 @@ You can add more `.txt` files in the `docs/` folder for expanding the knowledge 
 ---
 
 ## 📁 Project Structure
+pip install -r requirements.txt
+
 
