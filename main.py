@@ -1,29 +1,29 @@
-from retriever import SemanticRetriever
-from generator import AnswerGenerator
-import re
-
-def highlight_keywords(text):
-    keywords = ["encryption", "malware", "phishing", "data privacy", "security", "cybersecurity", "attack", "protection"]
-    for kw in keywords:
-        text = re.sub(rf"(?i)({kw})", r"\033[1m\1\033[0m", text)  # ANSI bold
-    return text
+# main.py
+from generator import Generator  # make sure generator.py exists
+from documents import load_docs  # assuming you have a function to load docs
 
 def main():
-    retriever = SemanticRetriever("data")
-    generator = AnswerGenerator()
+    # Load your documents
+    docs = load_docs()  # replace with your actual doc-loading function
+    generator = Generator()  # initialize your answer generator
 
+    print("Device set to use mps:0")
     print("Ask your questions (type 'exit' to quit):")
+
     while True:
-        query = input("> ").strip()
+        query = input("> ").strip()  # remove leading/trailing spaces
         if query.lower() == "exit":
-            break
+            print("Exiting...")
+            break  # exit the program
+        if not query:  # skip empty input
+            continue
 
-        docs = retriever.retrieve(query, top_k=5)
-        answer, sources = generator.generate_answer(query, docs)
-
-        print("\n💬 Final Answer:\n")
-        print(highlight_keywords(answer))
-        print(f"\n📄 Source(s): {sources}\n")
+        try:
+            answer, sources = generator.generate_answer(query, docs)
+            print("\nAnswer:", answer)
+            print("Sources:", sources, "\n")
+        except Exception as e:
+            print("Error generating answer:", e, "\n")
 
 if __name__ == "__main__":
     main()
